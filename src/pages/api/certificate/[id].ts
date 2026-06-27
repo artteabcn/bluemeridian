@@ -1,6 +1,4 @@
-import React from 'react';
-import { pdf } from '@react-pdf/renderer';
-import { CertificatePdf } from '../../../components/certificate';
+import { generateCertificate } from '../../../lib/certificate';
 
 export async function GET({ params, locals }: { params: { id: string }; locals: App.Locals }): Promise<Response> {
   const { id } = params;
@@ -14,21 +12,13 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
   }
 
   try {
-    const blob = await pdf(
-      React.createElement(CertificatePdf, {
-        name: shareholder.name,
-        jurisdiction: shareholder.jurisdiction,
-        percentage: shareholder.percentage,
-      })
-    ).toBlob();
+    const pdfBytes = await generateCertificate(shareholder.name, shareholder.jurisdiction, shareholder.percentage);
 
-    const arrayBuffer = await blob.arrayBuffer();
-
-    return new Response(arrayBuffer, {
+    return new Response(pdfBytes, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`
-      }
+        'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`,
+      },
     });
   } catch (err) {
     const message = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
