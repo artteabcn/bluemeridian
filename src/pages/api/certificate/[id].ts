@@ -13,18 +13,23 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
     return new Response("Shareholder not found", { status: 404 });
   }
 
-  const buffer = await renderToBuffer(
-    React.createElement(CertificatePdf, {
-      name: shareholder.name,
-      jurisdiction: shareholder.jurisdiction,
-      percentage: shareholder.percentage,
-    })
-  );
+  try {
+    const buffer = await renderToBuffer(
+      React.createElement(CertificatePdf, {
+        name: shareholder.name,
+        jurisdiction: shareholder.jurisdiction,
+        percentage: shareholder.percentage,
+      })
+    );
 
-  return new Response(buffer, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`
-    }
-  });
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`
+      }
+    });
+  } catch (err) {
+    const message = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    return new Response(message, { status: 500, headers: { 'Content-Type': 'text/plain' } });
+  }
 }
