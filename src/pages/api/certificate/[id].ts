@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderToBuffer } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { CertificatePdf } from '../../../components/certificate';
 
 export async function GET({ params, locals }: { params: { id: string }; locals: App.Locals }): Promise<Response> {
@@ -14,15 +14,17 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
   }
 
   try {
-    const buffer = await renderToBuffer(
+    const blob = await pdf(
       React.createElement(CertificatePdf, {
         name: shareholder.name,
         jurisdiction: shareholder.jurisdiction,
         percentage: shareholder.percentage,
       })
-    );
+    ).toBlob();
 
-    return new Response(buffer, {
+    const arrayBuffer = await blob.arrayBuffer();
+
+    return new Response(arrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`
