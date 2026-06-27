@@ -1,0 +1,81 @@
+---
+let db = Astro.locals.runtime.env.DB;
+let message = "";
+
+// Handle updating a shareholder's stake
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const id = formData.get("id");
+  const name = formData.get("name");
+  const jurisdiction = formData.get("jurisdiction");
+  const percentage = formData.get("percentage");
+
+  try {
+    await db.prepare("UPDATE shareholders SET name = ?, jurisdiction = ?, percentage = ? WHERE id = ?")
+      .bind(name, jurisdiction, parseFloat(percentage), id)
+      .run();
+    message = "Registry updated successfully!";
+  } catch (err) {
+    message = "Error updating registry: " + err.message;
+  }
+}
+
+// Fetch all shareholders
+const { results: shareholders } = await db.prepare("SELECT * FROM shareholders").all();
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Aegis Registry Management</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #333; padding: 40px; }
+    main { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    h1 { color: #0f2537; margin-bottom: 5px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 0.95rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e1e4e8; }
+    th { background: #f8f9fa; color: #0f2537; }
+    input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 90%; }
+    .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+    .btn-save { background: #0f2537; color: white; }
+    .btn-pdf { background: #8a6d3b; color: white; font-size: 0.85rem; }
+    .alert { padding: 10px; background: #d4edda; color: #155724; border-radius: 4px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Aegis Flag Registry Corp.</h1>
+    <p class="subtitle">Internal Shareholder Ledger & Certificate Provisioning Portal</p>
+
+    {message && <div class="alert">{message}</div>}
+
+    <table>
+      <thead>
+        <tr>
+          <th>Shareholder Name</th>
+          <th>Jurisdiction</th>
+          <th>Ownership %</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {shareholders.map((sh) => (
+          <tr>
+            <form method="POST">
+              <input type="hidden" name="id" value={sh.id} />
+              <td><input type="text" name="name" value={sh.name} /></td>
+              <td><input type="text" name="jurisdiction" value={sh.jurisdiction} /></td>
+              <td><input type="number" step="0.01" name="percentage" value={sh.percentage} style="width: 70px;" />%</td>
+              <td>
+                <button type="submit" class="btn btn-save">Save</button>
+                <a href={`/api/certificate/${sh.id}`} target="_blank" class="btn btn-pdf">PDF Cert</a>
+              </td>
+            </form>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
