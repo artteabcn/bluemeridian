@@ -5,4 +5,4 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "aegis_db"
-database_id = "aegis_db"
+database_id = "15cbb9f6-976f-47e6-8a51-be9b274d3a8a"
