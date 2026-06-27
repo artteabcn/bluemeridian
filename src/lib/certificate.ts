@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { stampBase64 } from '../assets/stamp';
 
 const DARK_BLUE = rgb(15 / 255, 37 / 255, 55 / 255);
 const GOLD      = rgb(138 / 255, 109 / 255, 59 / 255);
@@ -69,15 +70,12 @@ export async function generateCertificate(
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   page.drawText(`Certificate Date: ${date}`, { x: inner + 20, y: inner + 68, font: regular, size: 9, color: GRAY });
 
-  // Stamp image (center-bottom, skip silently if unavailable)
+  // Stamp image (bundled at build time as base64 — no runtime fetch needed)
   try {
-    const res = await fetch('https://aegis-8x3.pages.dev/stamp.png');
-    if (res.ok) {
-      const imgBytes = await res.arrayBuffer();
-      const img = await doc.embedPng(imgBytes);
-      const dims = img.scaleToFit(80, 80);
-      page.drawImage(img, { x: (width - dims.width) / 2, y: inner + 30, ...dims });
-    }
+    const stampBytes = Uint8Array.from(atob(stampBase64), c => c.charCodeAt(0));
+    const img = await doc.embedPng(stampBytes);
+    const dims = img.scaleToFit(80, 80);
+    page.drawImage(img, { x: (width - dims.width) / 2, y: inner + 30, ...dims });
   } catch {
     // stamp is decorative; skip silently
   }
