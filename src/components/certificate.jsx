@@ -99,7 +99,7 @@ export const CertificatePdf = ({ name, jurisdiction, percentage }) => (
           </View>
           
           {/* Stamp Placeholder (Points to your public asset folder) */}
-          <Image src="http://localhost:4321/stamp.png" style={styles.stamp} />
+          <Image src="https://aegis-8x3.pages.dev/stamp.png" style={styles.stamp} />
 
           <View style={styles.signBlock}>
             <Text>Authorized Director</Text>
