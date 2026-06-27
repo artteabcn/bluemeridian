@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderToStream } from '@react-pdf/renderer';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { CertificatePdf } from '../../../components/certificate';
 
 export async function GET({ params, locals }: { params: { id: string }; locals: App.Locals }): Promise<Response> {
@@ -13,7 +13,7 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
     return new Response("Shareholder not found", { status: 404 });
   }
 
-  const stream = await renderToStream(
+  const buffer = await renderToBuffer(
     React.createElement(CertificatePdf, {
       name: shareholder.name,
       jurisdiction: shareholder.jurisdiction,
@@ -21,7 +21,7 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
     })
   );
 
-  return new Response(stream as unknown as ReadableStream, {
+  return new Response(buffer, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="certificate_${shareholder.name.replace(/\s+/g, '_')}.pdf"`
