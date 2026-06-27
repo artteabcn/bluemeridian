@@ -14,11 +14,11 @@ export async function GET({ params, locals }: { params: { id: string }; locals: 
   }
 
   const stream = await renderToStream(
-    <CertificatePdf
-      name={shareholder.name}
-      jurisdiction={shareholder.jurisdiction}
-      percentage={shareholder.percentage}
-    />
+    React.createElement(CertificatePdf, {
+      name: shareholder.name,
+      jurisdiction: shareholder.jurisdiction,
+      percentage: shareholder.percentage,
+    })
   );
 
   return new Response(stream as unknown as ReadableStream, {
