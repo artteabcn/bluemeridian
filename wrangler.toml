@@ -1,13 +1,13 @@
-name = "aegis"
+name = "bluemeridian"
 compatibility_date = "2026-06-26"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "aegis_db"
-database_id = "15cbb9f6-976f-47e6-8a51-be9b274d3a8a"
+database_name = "bluemeridian_db"
+database_id = "REPLACE_WITH_NEW_D1_DATABASE_ID"
 
 [[r2_buckets]]
 binding = "FILES"
-bucket_name = "aegis-documents"
+bucket_name = "bluemeridian"

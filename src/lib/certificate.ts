@@ -56,9 +56,9 @@ export async function generateCertificate(
   }
 
   // Company name
-  centered('AEGIS FLAG REGISTRY CORPORATION', bold, 21, height - 104, DARK_BLUE);
+  centered('BLUE MERIDIAN FISHERIES CORPORATION', bold, 21, height - 104, DARK_BLUE);
   // Subtitle
-  centered('Delaware Corporation  ·  File Number: DE 10677842  ·  Incorporated: June 26, 2026', regular, 8.5, height - 122, GRAY);
+  centered('Delaware Corporation  ·  File Number: DE 10677862  ·  Incorporated: June 26, 2026', regular, 8.5, height - 122, GRAY);
   // Rule below subtitle
   page.drawLine({ start:{x:inner+20, y:height-135}, end:{x:width-inner-20, y:height-135}, thickness: 0.4, color: DARK_BLUE });
 
@@ -81,7 +81,7 @@ export async function generateCertificate(
   centered(`This certifies that ${name},`, italic, 13, height - 232);
   centered(`incorporated in ${jurisdiction},`, italic, 13, height - 252);
   centered(`is the registered holder of ${percentage}% of the total authorized capital stock`, italic, 13, height - 272);
-  centered('of Aegis Flag Registry Corporation.', italic, 13, height - 292);
+  centered('of Blue Meridian Fisheries Corporation.', italic, 13, height - 292);
 
   // Stamp (center-bottom)
   try {
@@ -95,7 +95,7 @@ export async function generateCertificate(
   page.drawLine({ start:{x:inner+20, y:inner+100}, end:{x:width-inner-20, y:inner+100}, thickness: 0.3, color: DARK_BLUE });
 
   // Serial number (bottom-left)
-  const serial = `No. AEGIS-2026-${String(id).padStart(4, '0')}`;
+  const serial = `No. BMFC-2026-${String(id).padStart(4, '0')}`;
   page.drawText(serial, { x: inner+20, y: inner+108, font: bold, size: 8, color: DARK_BLUE });
 
   // Issue date (below serial)
