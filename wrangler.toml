@@ -6,7 +6,7 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "bluemeridian_db"
-database_id = "REPLACE_WITH_NEW_D1_DATABASE_ID"
+database_id = "b2f59f64-1273-495e-a224-306c4f2ea357"
 
 [[r2_buckets]]
 binding = "FILES"
