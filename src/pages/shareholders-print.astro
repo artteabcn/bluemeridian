@@ -1,4 +1,6 @@
 ---
+import { stampBase64 } from '../assets/stamp';
+
 const db = Astro.locals.runtime.env.DB;
 
 const { results: shareholders } = await db.prepare('SELECT * FROM shareholders ORDER BY id').all() as {
@@ -124,6 +126,7 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
     .sign-block {
       display: flex;
       justify-content: space-between;
+      align-items: flex-end;
       margin-top: 72px;
     }
     .sign {
@@ -131,6 +134,13 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
     }
     .sign-line { border-top: 1px solid var(--ink); margin-bottom: 6px; }
     .sign-lbl { font-size: 10.5px; color: var(--muted); }
+
+    .stamp {
+      width: 108px;
+      height: 108px;
+      object-fit: contain;
+      opacity: .92;
+    }
 
     .ftr {
       margin-top: 40px;
@@ -203,6 +213,7 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
         <div class="sign-line"></div>
         <div class="sign-lbl">Authorized Director</div>
       </div>
+      <img class="stamp" src={`data:image/png;base64,${stampBase64}`} alt="Corporate Seal" />
       <div class="sign">
         <div class="sign-line"></div>
         <div class="sign-lbl">Date</div>
