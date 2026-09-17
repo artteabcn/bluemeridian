@@ -1,4 +1,5 @@
 ---
+import TopNav from '../components/TopNav.astro';
 import { ensureCompanyDocumentsTable } from '../lib/company-documents-table';
 
 const db = Astro.locals.runtime.env.DB;
@@ -272,9 +273,10 @@ const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreemen
     </div>
     <div class="hdr-right">
       <div class="hdr-date">{today}</div>
-      <a href="/" class="back-link">&larr; Back to Registry</a>
     </div>
   </header>
+
+  <TopNav active="/documents" />
 
   <div class="card">
     <div class="card-hdr">

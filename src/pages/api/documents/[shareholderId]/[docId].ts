@@ -37,5 +37,5 @@ export const POST: APIRoute = async ({ params, request, locals, redirect }) => {
     }
   }
 
-  return redirect('/', 303);
+  return redirect('/shareholders', 303);
 };

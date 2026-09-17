@@ -28,5 +28,5 @@ export const POST: APIRoute = async ({ params, request, locals, redirect }) => {
     'INSERT INTO documents (shareholder_id, file_name, doc_type, r2_key, file_size) VALUES (?, ?, ?, ?, ?)'
   ).bind(Number(shareholderId), file.name, docType, r2Key, file.size).run();
 
-  return redirect('/', 303);
+  return redirect('/shareholders', 303);
 };

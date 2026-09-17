@@ -1,0 +1,66 @@
+---
+interface Props { active?: string }
+const { active = '' } = Astro.props;
+
+const items: Array<{ href: string; label: string; newTab?: boolean; icon: string }> = [
+  { href: '/', label: 'Registry', icon: 'home' },
+  { href: '/shareholders', label: 'Shareholders', icon: 'users' },
+  { href: '/documents', label: 'Official Documents', icon: 'file' },
+  { href: '/sign', label: 'Sign Documents', icon: 'pen' },
+  { href: '/shareholders-print', label: 'Print Shareholders List', icon: 'printer', newTab: true },
+];
+
+const icons: Record<string, string> = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.6"/><path d="M15.5 14.2c2.8.4 4.5 2.4 4.5 5.8"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+};
+---
+<nav class="top-nav">
+  {items.map(item => (
+    <a
+      href={item.href}
+      class={`nav-link${active === item.href ? ' active' : ''}`}
+      target={item.newTab ? '_blank' : undefined}
+      set:html={`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[item.icon]}</svg>${item.label}`}
+    />
+  ))}
+</nav>
+
+<style>
+  .top-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    transition: all .22s var(--ease);
+  }
+  .nav-link :global(svg) { color: var(--gold); flex-shrink: 0; }
+  .nav-link:hover {
+    border-color: rgba(201,169,110,.4);
+    background: var(--surface2);
+    transform: translateY(-1px);
+  }
+  .nav-link.active {
+    border-color: rgba(201,169,110,.5);
+    background: rgba(201,169,110,.1);
+  }
+  @media (max-width: 768px) {
+    .top-nav { flex-direction: column; }
+  }
+</style>

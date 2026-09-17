@@ -1,0 +1,180 @@
+---
+import TopNav from '../components/TopNav.astro';
+import { ensureSignatureRequestsTable } from '../lib/signature-requests-table';
+
+const db = Astro.locals.runtime.env.DB;
+await ensureSignatureRequestsTable(db);
+
+const { results: shareholders } = await db.prepare(
+  "SELECT name, email FROM shareholders WHERE email IS NOT NULL AND email != ''"
+).all() as { results: Array<{ name: string; email: string }> };
+
+const { results: requests } = await db.prepare(
+  'SELECT * FROM signature_requests ORDER BY created_at DESC'
+).all() as {
+  results: Array<{
+    id: number; title: string; doc_type: string; status: string;
+    signer_emails: string; created_at: string; completed_at: string | null;
+  }>;
+};
+
+const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  catch { return iso; }
+}
+
+const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreement', 'Stock Transfer', 'Other'];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blue Meridian Fisheries — Sign Documents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060d14; --surface: #0b1928; --surface2: #0f2437;
+      --border: rgba(201,169,110,.14); --border2: rgba(255,255,255,.06);
+      --gold: #c9a96e; --gold-d: #8a6d3b; --gold-l: #e8d5a3;
+      --text: #f0ede8; --muted: #4a6580; --muted2: #2d4560;
+      --green: #3dd68c; --amber: #e0a94b; --red: #f86b6b;
+      --ease: cubic-bezier(.32,.72,0,1);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; padding: 52px 28px 80px; }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+
+    .hdr { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 36px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+    .eyebrow { display: inline-block; font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,169,110,.3); border-radius: 100px; padding: 3px 10px; margin-bottom: 14px; font-weight: 500; }
+    .hdr h1 { font-family: 'Cormorant Garamond', serif; font-size: 52px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+    .hdr-sub { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .hdr-right { text-align: right; }
+    .hdr-date { font-size: 11.5px; color: var(--muted); }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 24px; }
+    .card-hdr { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border); }
+    .card-title { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; }
+    .card-tag { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+
+    .req-list { display: flex; flex-direction: column; }
+    .req-empty { font-size: 13px; color: var(--muted); font-style: italic; padding: 24px; text-align: center; }
+    .req-item { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 13px; flex-wrap: wrap; }
+    .req-item:last-child { border-bottom: none; }
+    .req-title { font-weight: 500; flex: 1; min-width: 160px; }
+    .req-type { font-size: 9.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); background: rgba(201,169,110,.1); border: 1px solid rgba(201,169,110,.22); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
+    .req-meta { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+    .status-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; border-radius: 100px; padding: 4px 10px; white-space: nowrap; }
+    .status-pending { color: var(--amber); background: rgba(224,169,75,.1); border: 1px solid rgba(224,169,75,.28); }
+    .status-completed { color: var(--green); background: rgba(61,214,140,.08); border: 1px solid rgba(61,214,140,.22); }
+    .signers-note { color: var(--muted); font-size: 11px; width: 100%; }
+
+    .btn { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 500; border: none; cursor: pointer; text-decoration: none; white-space: nowrap; transition: all .22s var(--ease); }
+    .btn-check { background: rgba(201,169,110,.14); color: var(--gold); border: 1px solid rgba(201,169,110,.28); }
+    .btn-check:hover { background: rgba(201,169,110,.24); }
+
+    .upload-row { display: flex; align-items: center; gap: 8px; padding: 18px 24px; border-top: 1px solid var(--border); background: rgba(201,169,110,.02); flex-wrap: wrap; }
+    .upload-row input[type="text"] { min-width: 200px; flex: 1; background: rgba(6,13,20,.7); border: 1px solid rgba(201,169,110,.14); border-radius: 7px; padding: 8px 10px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--text); outline: none; }
+    .upload-row input[type="file"] { flex: 1; min-width: 180px; font-size: 12px; color: var(--text); background: rgba(6,13,20,.7); border: 1px solid rgba(201,169,110,.14); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .upload-row select { font-size: 12px; color: var(--text); background: rgba(6,13,20,.9); border: 1px solid rgba(201,169,110,.14); border-radius: 7px; padding: 8px 10px; cursor: pointer; font-family: 'DM Sans', sans-serif; outline: none; }
+    .btn-upload { background: var(--gold); color: #060d14; border: none; border-radius: 7px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: background .2s; }
+    .btn-upload:hover { background: var(--gold-l); }
+
+    .signers-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; font-size: 12.5px; color: var(--muted); }
+    .signers-box b { color: var(--text); }
+
+    .page-ftr { padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+
+    @media (max-width: 768px) {
+      body { padding: 28px 16px 60px; }
+      .hdr { flex-direction: column; gap: 16px; }
+      .hdr h1 { font-size: 38px; }
+      .hdr-right { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <div>
+      <span class="eyebrow">Delaware Corporation · Est. 2026</span>
+      <h1>Sign Documents</h1>
+      <p class="hdr-sub">Shareholder Resolutions Requiring Signature · File No. DE 10677862</p>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-date">{today}</div>
+    </div>
+  </header>
+
+  <TopNav active="/sign" />
+
+  <div class="signers-box">
+    Signing happens on <b>OpenSign</b> — each shareholder with an email on file receives a signing link by email
+    when a document is submitted below. Once every shareholder has signed, use <b>Check Status</b> to pull the
+    completed, signed PDF into <a href="/documents" style="color:var(--gold);">Official Documents</a> automatically.
+    {shareholders.length === 0
+      ? <span style="color:var(--red);"> No shareholder has an email yet — add emails on the <a href="/shareholders" style="color:var(--gold);">Shareholders</a> page first.</span>
+      : <span> Current signers: <b>{shareholders.map(s => s.name).join(', ')}</b>.</span>
+    }
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-title">Signature Requests</span>
+      <span class="card-tag">{requests.length} Request{requests.length === 1 ? '' : 's'}</span>
+    </div>
+
+    <div class="req-list">
+      {requests.length === 0
+        ? <p class="req-empty">No documents sent for signature yet.</p>
+        : requests.map(r => {
+            const signed = JSON.parse(r.signer_emails || '[]') as string[];
+            return (
+              <div class="req-item">
+                <span class="req-type">{r.doc_type}</span>
+                <span class="req-title">{r.title}</span>
+                <span class={`status-badge ${r.status === 'completed' ? 'status-completed' : 'status-pending'}`}>
+                  {r.status}
+                </span>
+                <span class="req-meta">Sent {formatDate(r.created_at)}</span>
+                {r.status !== 'completed' && (
+                  <form method="POST" action={`/api/signature-requests/${r.id}/check`} style="display:inline">
+                    <button type="submit" class="btn btn-check">Check Status</button>
+                  </form>
+                )}
+                {r.status !== 'completed' && (
+                  <span class="signers-note">
+                    Signed so far: {signed.length > 0 ? signed.join(', ') : 'none yet'}
+                  </span>
+                )}
+              </div>
+            );
+          })
+      }
+    </div>
+
+    <form method="POST" action="/api/signature-requests" enctype="multipart/form-data" class="upload-row">
+      <input type="text" name="title" placeholder="Document title (e.g. Board Resolution — Q3)" required />
+      <select name="docType">
+        {DOC_TYPES.map(t => <option value={t}>{t}</option>)}
+      </select>
+      <input type="file" name="file" accept="application/pdf" required />
+      <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>Send for Signature</button>
+    </form>
+  </div>
+
+  <footer class="page-ftr">
+    <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
+    <span>Confidential — Internal Registry Portal</span>
+  </footer>
+
+</div>
+</body>
+</html>
