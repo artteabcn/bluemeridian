@@ -1,12 +1,14 @@
 import type { APIRoute } from 'astro';
 import { ensureSignatureRequestsTable } from '../../../lib/signature-requests-table';
 import { createSignatureRequest } from '../../../lib/signwell';
+import { ensureShareholderEmailColumn } from '../../../lib/shareholders-table';
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const db = locals.runtime.env.DB;
   const r2 = locals.runtime.env.FILES;
 
   await ensureSignatureRequestsTable(db);
+  await ensureShareholderEmailColumn(db);
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

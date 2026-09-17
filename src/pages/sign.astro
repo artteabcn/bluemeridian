@@ -1,9 +1,11 @@
 ---
 import TopNav from '../components/TopNav.astro';
 import { ensureSignatureRequestsTable } from '../lib/signature-requests-table';
+import { ensureShareholderEmailColumn } from '../lib/shareholders-table';
 
 const db = Astro.locals.runtime.env.DB;
 await ensureSignatureRequestsTable(db);
+await ensureShareholderEmailColumn(db);
 
 const { results: shareholders } = await db.prepare(
   "SELECT name, email FROM shareholders WHERE email IS NOT NULL AND email != ''"
