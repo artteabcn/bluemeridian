@@ -74,6 +74,7 @@ const errorMessage = Astro.url.searchParams.get('error');
     .req-type { font-size: 9.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); background: rgba(201,169,110,.1); border: 1px solid rgba(201,169,110,.22); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
     .req-meta { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
     .status-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; border-radius: 100px; padding: 4px 10px; white-space: nowrap; }
+    .status-draft { color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--border2); }
     .status-pending { color: var(--amber); background: rgba(224,169,75,.1); border: 1px solid rgba(224,169,75,.28); }
     .status-completed { color: var(--green); background: rgba(61,214,140,.08); border: 1px solid rgba(61,214,140,.22); }
     .signers-note { color: var(--muted); font-size: 11px; width: 100%; }
@@ -97,8 +98,8 @@ const errorMessage = Astro.url.searchParams.get('error');
     .btn-delete { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
     .btn-delete:hover { background: rgba(248,107,107,.1); color: var(--red); border-color: rgba(248,107,107,.28); }
 
-    .page-input { width: 56px; background: rgba(6,13,20,.7); border: 1px solid rgba(201,169,110,.14); border-radius: 7px; padding: 8px 6px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--text); outline: none; text-align: center; }
-    .page-lbl { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .btn-continue { background: rgba(224,169,75,.14); color: var(--amber); border: 1px solid rgba(224,169,75,.32); }
+    .btn-continue:hover { background: rgba(224,169,75,.24); }
 
     .page-ftr { padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
 
@@ -129,9 +130,10 @@ const errorMessage = Astro.url.searchParams.get('error');
   {errorMessage && <div class="toast">{errorMessage}</div>}
 
   <div class="signers-box">
-    Signing happens on <b>SignWell</b> — each shareholder with an email on file receives a signing link by email
-    when a document is submitted below. Once every shareholder has signed, SignWell's webhook automatically pulls
-    the completed, signed PDF into <a href="/documents" style="color:var(--gold);">Official Documents</a>.
+    Uploading below creates a <b>draft</b> on SignWell — you'll place each shareholder's signature field yourself,
+    exactly where it belongs on that specific document, then hit Send inside SignWell's own editor. From there,
+    each shareholder gets a signing link by email. Once everyone has signed, SignWell's webhook automatically
+    pulls the completed, signed PDF into <a href="/documents" style="color:var(--gold);">Official Documents</a>.
     <b>Check Status</b> is there as a manual fallback if the webhook hasn't fired yet.
     {shareholders.length === 0
       ? <span style="color:var(--red);"> No shareholder has an email yet — add emails on the <a href="/shareholders" style="color:var(--gold);">Shareholders</a> page first.</span>
@@ -150,15 +152,17 @@ const errorMessage = Astro.url.searchParams.get('error');
         ? <p class="req-empty">No documents sent for signature yet.</p>
         : requests.map(r => {
             const signed = JSON.parse(r.signer_emails || '[]') as string[];
+            const statusClass = r.status === 'completed' ? 'status-completed' : r.status === 'draft' ? 'status-draft' : 'status-pending';
             return (
               <div class="req-item">
                 <span class="req-type">{r.doc_type}</span>
                 <span class="req-title">{r.title}</span>
-                <span class={`status-badge ${r.status === 'completed' ? 'status-completed' : 'status-pending'}`}>
-                  {r.status}
-                </span>
-                <span class="req-meta">Sent {formatDate(r.created_at)}</span>
-                {r.status !== 'completed' && (
+                <span class={`status-badge ${statusClass}`}>{r.status}</span>
+                <span class="req-meta">{r.status === 'draft' ? 'Created' : 'Sent'} {formatDate(r.created_at)}</span>
+                {r.status === 'draft' && (
+                  <a href={`/sign/edit/${r.id}`} class="btn btn-continue">Continue Placing Fields</a>
+                )}
+                {r.status !== 'completed' && r.status !== 'draft' && (
                   <form method="POST" action={`/api/signature-requests/${r.id}/check`} style="display:inline">
                     <button type="submit" class="btn btn-check">Check Status</button>
                   </form>
@@ -171,7 +175,7 @@ const errorMessage = Astro.url.searchParams.get('error');
                 >
                   <button type="submit" class="btn btn-delete">Delete</button>
                 </form>
-                {r.status !== 'completed' && (
+                {r.status !== 'completed' && r.status !== 'draft' && (
                   <span class="signers-note">
                     Signed so far: {signed.length > 0 ? signed.join(', ') : 'none yet'}
                   </span>
@@ -188,15 +192,8 @@ const errorMessage = Astro.url.searchParams.get('error');
         {DOC_TYPES.map(t => <option value={t}>{t}</option>)}
       </select>
       <input type="file" name="file" accept="application/pdf" required />
-      <span class="page-lbl">Signature page</span>
-      <input type="number" name="signaturePage" class="page-input" value="1" min="1" required />
-      <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>Send for Signature</button>
+      <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>Create Draft &amp; Place Fields</button>
     </form>
-    <p style="padding:0 24px 16px;font-size:11px;color:var(--muted);">
-      Signature fields land near the bottom of the page number you pick above, side by side for each shareholder.
-      If they land somewhere odd, it's usually because the PDF's page size differs from standard Letter/A4 — try a
-      different page number or let us know and we'll adjust the placement.
-    </p>
   </div>
 
   <footer class="page-ftr">

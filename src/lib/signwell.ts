@@ -7,8 +7,9 @@
 
 export type Signer = { name: string; email: string };
 
-export type CreateSignatureRequestResult = {
+export type CreateDraftResult = {
   documentId: string;
+  embeddedEditUrl: string;
 };
 
 export type DocumentStatus = {
@@ -26,29 +27,18 @@ function headers(env: any): Record<string, string> {
   };
 }
 
-export async function createSignatureRequest(
+// Creates the document as a draft (not sent yet) with no fields placed.
+// SignWell returns an `embedded_edit_url` for a draft document — load that
+// in their own embedded editor (SignWellEmbed JS) so a human drags each
+// signature field onto the actual rendered PDF, per document, instead of
+// us guessing pixel coordinates blind. The document is only actually sent
+// once the sender clicks Send inside that embedded editor.
+export async function createDraftSignatureRequest(
   env: any,
-  opts: { title: string; fileBytes: ArrayBuffer; fileName: string; signers: Signer[]; signaturePage: number }
-): Promise<CreateSignatureRequestResult> {
+  opts: { title: string; fileBytes: ArrayBuffer; fileName: string; signers: Signer[] }
+): Promise<CreateDraftResult> {
   const base64 = arrayBufferToBase64(opts.fileBytes);
   const recipients = opts.signers.map((s, i) => ({ id: String(i + 1), name: s.name, email: s.email }));
-
-  // SignWell field coordinates are pixels from the page's TOP-LEFT corner
-  // (not points from the bottom, and not a percentage). This lays one
-  // signature field per signer in a row near the bottom of the chosen page,
-  // spaced out horizontally so they don't overlap. `y` assumes a roughly
-  // US-Letter/A4 portrait page — nudge it if your documents render taller
-  // or shorter than that.
-  const fields = [
-    recipients.map((r, i) => ({
-      x: 50 + i * 220,
-      y: 700,
-      page: opts.signaturePage,
-      recipient_id: r.id,
-      type: 'signature',
-      required: true,
-    })),
-  ];
 
   const res = await fetch(`${BASE_URL}/documents`, {
     method: 'POST',
@@ -58,19 +48,20 @@ export async function createSignatureRequest(
       name: opts.title,
       files: [{ name: opts.fileName, file_base64: base64 }],
       recipients,
-      fields,
-      draft: false,
+      draft: true,
     }),
   });
 
   if (!res.ok) {
-    throw new Error(`SignWell create document failed: ${res.status} ${await res.text()}`);
+    throw new Error(`SignWell create draft failed: ${res.status} ${await res.text()}`);
   }
 
   const data = await res.json() as any;
-  if (!data.id) throw new Error('SignWell create document response missing id');
+  if (!data.id || !data.embedded_edit_url) {
+    throw new Error('SignWell draft response missing id or embedded_edit_url');
+  }
 
-  return { documentId: data.id };
+  return { documentId: data.id, embeddedEditUrl: data.embedded_edit_url };
 }
 
 export async function getDocumentStatus(env: any, documentId: string): Promise<DocumentStatus> {

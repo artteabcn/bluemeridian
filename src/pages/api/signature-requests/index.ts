@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { ensureSignatureRequestsTable } from '../../../lib/signature-requests-table';
-import { createSignatureRequest } from '../../../lib/signwell';
+import { createDraftSignatureRequest } from '../../../lib/signwell';
 import { ensureShareholderEmailColumn } from '../../../lib/shareholders-table';
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
@@ -14,7 +14,6 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const file = formData.get('file') as File | null;
   const title = String(formData.get('title') || '').trim();
   const docType = String(formData.get('docType') || 'Other');
-  const signaturePage = Math.max(1, parseInt(String(formData.get('signaturePage') || '1'), 10) || 1);
 
   if (!file || file.size === 0) return redirect('/sign?error=' + encodeURIComponent('No file provided'), 303);
   if (!title) return redirect('/sign?error=' + encodeURIComponent('Title is required'), 303);
@@ -32,26 +31,28 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
   const r2Key = `signature/${uuid}_${safeName}`;
 
+  let insertedId: number;
+
   try {
     await r2.put(r2Key, fileBytes, {
       httpMetadata: { contentType: file.type || 'application/octet-stream' },
     });
 
-    const { documentId } = await createSignatureRequest(locals.runtime.env, {
+    const { documentId, embeddedEditUrl } = await createDraftSignatureRequest(locals.runtime.env, {
       title,
       fileBytes,
       fileName: file.name,
       signers: shareholders.map(s => ({ name: s.name, email: s.email })),
-      signaturePage,
     });
 
-    await db.prepare(
-      'INSERT INTO signature_requests (title, doc_type, file_name, r2_key, esign_document_id) VALUES (?, ?, ?, ?, ?)'
-    ).bind(title, docType, file.name, r2Key, documentId).run();
+    const insert = await db.prepare(
+      "INSERT INTO signature_requests (title, doc_type, file_name, r2_key, esign_document_id, embedded_edit_url, status) VALUES (?, ?, ?, ?, ?, ?, 'draft')"
+    ).bind(title, docType, file.name, r2Key, documentId, embeddedEditUrl).run();
+    insertedId = insert.meta.last_row_id;
   } catch (e: any) {
     await r2.delete(r2Key).catch(() => {});
     return redirect('/sign?error=' + encodeURIComponent('SignWell error: ' + e.message), 303);
   }
 
-  return redirect('/sign', 303);
+  return redirect(`/sign/edit/${insertedId}`, 303);
 };
