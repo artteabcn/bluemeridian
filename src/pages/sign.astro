@@ -2,6 +2,10 @@
 import TopNav from '../components/TopNav.astro';
 import { ensureSignatureRequestsTable } from '../lib/signature-requests-table';
 import { ensureShareholderEmailColumn } from '../lib/shareholders-table';
+import { getLocale, useTranslations } from '../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 await ensureSignatureRequestsTable(db);
@@ -20,20 +24,26 @@ const { results: requests } = await db.prepare(
   }>;
 };
 
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  try { return new Date(iso).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   catch { return iso; }
 }
 
-const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreement', 'Stock Transfer', 'Other'];
+const DOC_TYPES = [
+  { value: 'Board Resolution', key: 'sign.typeBoardResolution' },
+  { value: 'Bylaws Amendment', key: 'sign.typeBylawsAmendment' },
+  { value: 'Shareholder Agreement', key: 'sign.typeShareholderAgreement' },
+  { value: 'Stock Transfer', key: 'sign.typeStockTransfer' },
+  { value: 'Other', key: 'sign.typeOther' },
+];
 const errorMessage = Astro.url.searchParams.get('error');
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -118,7 +128,7 @@ const errorMessage = Astro.url.searchParams.get('error');
     <div>
       <span class="eyebrow">Delaware Corporation · Est. 2026</span>
       <h1>Sign Documents</h1>
-      <p class="hdr-sub">Shareholder Resolutions Requiring Signature · File No. DE 10677862</p>
+      <p class="hdr-sub">{t('sign.subtitle')} · File No. DE 10677862</p>
     </div>
     <div class="hdr-right">
       <div class="hdr-date">{today}</div>
@@ -130,54 +140,54 @@ const errorMessage = Astro.url.searchParams.get('error');
   {errorMessage && <div class="toast">{errorMessage}</div>}
 
   <div class="signers-box">
-    Uploading below creates a <b>draft</b> on SignWell — you'll place each shareholder's signature field yourself,
-    exactly where it belongs on that specific document, then hit Send inside SignWell's own editor. From there,
-    each shareholder gets a signing link by email. Once everyone has signed, SignWell's webhook automatically
-    pulls the completed, signed PDF into <a href="/documents" style="color:var(--gold);">Official Documents</a>.
-    <b>Check Status</b> is there as a manual fallback if the webhook hasn't fired yet.
+    <span set:html={t('sign.info', {
+      docsLink: `<a href="/documents" style="color:var(--gold);">${t('nav.documents')}</a>`,
+      checkStatus: `<b>${t('sign.checkStatus')}</b>`,
+    })} />
     {shareholders.length === 0
-      ? <span style="color:var(--red);"> No shareholder has an email yet — add emails on the <a href="/shareholders" style="color:var(--gold);">Shareholders</a> page first.</span>
-      : <span> Current signers: <b>{shareholders.map(s => s.name).join(', ')}</b>.</span>
+      ? <span style="color:var(--red);" set:html={' ' + t('sign.noEmails', { shLink: `<a href="/shareholders" style="color:var(--red);">${t('nav.shareholders')}</a>` })} />
+      : <span set:html={' ' + t('sign.currentSigners', { names: `<b>${shareholders.map(s => s.name).join(', ')}</b>` })} />
     }
   </div>
 
   <div class="card">
     <div class="card-hdr">
-      <span class="card-title">Signature Requests</span>
-      <span class="card-tag">{requests.length} Request{requests.length === 1 ? '' : 's'}</span>
+      <span class="card-title">{t('sign.cardTitle')}</span>
+      <span class="card-tag">{requests.length} {requests.length === 1 ? t('sign.request') : t('sign.requestPlural')}</span>
     </div>
 
     <div class="req-list">
       {requests.length === 0
-        ? <p class="req-empty">No documents sent for signature yet.</p>
+        ? <p class="req-empty">{t('sign.empty')}</p>
         : requests.map(r => {
             const signed = JSON.parse(r.signer_emails || '[]') as string[];
             const statusClass = r.status === 'completed' ? 'status-completed' : r.status === 'draft' ? 'status-draft' : 'status-pending';
+            const statusLabel = r.status === 'completed' ? t('sign.statusCompleted') : r.status === 'draft' ? t('sign.statusDraft') : t('sign.statusPending');
             return (
               <div class="req-item">
                 <span class="req-type">{r.doc_type}</span>
                 <span class="req-title">{r.title}</span>
-                <span class={`status-badge ${statusClass}`}>{r.status}</span>
-                <span class="req-meta">{r.status === 'draft' ? 'Created' : 'Sent'} {formatDate(r.created_at)}</span>
+                <span class={`status-badge ${statusClass}`}>{statusLabel}</span>
+                <span class="req-meta">{r.status === 'draft' ? t('sign.created') : t('sign.sent')} {formatDate(r.created_at)}</span>
                 {r.status === 'draft' && (
-                  <a href={`/sign/edit/${r.id}`} class="btn btn-continue">Continue Placing Fields</a>
+                  <a href={`/sign/edit/${r.id}`} class="btn btn-continue">{t('sign.continuePlacing')}</a>
                 )}
                 {r.status !== 'completed' && r.status !== 'draft' && (
                   <form method="POST" action={`/api/signature-requests/${r.id}/check`} style="display:inline">
-                    <button type="submit" class="btn btn-check">Check Status</button>
+                    <button type="submit" class="btn btn-check">{t('sign.checkStatus')}</button>
                   </form>
                 )}
                 <form
                   method="POST"
                   action={`/api/signature-requests/${r.id}/delete`}
                   style="display:inline"
-                  onsubmit="return confirm('Delete this signature request? This cancels it on SignWell too and cannot be undone.')"
+                  onsubmit={`return confirm(${JSON.stringify(t('sign.confirmDelete'))})`}
                 >
-                  <button type="submit" class="btn btn-delete">Delete</button>
+                  <button type="submit" class="btn btn-delete">{t('sign.delete')}</button>
                 </form>
                 {r.status !== 'completed' && r.status !== 'draft' && (
                   <span class="signers-note">
-                    Signed so far: {signed.length > 0 ? signed.join(', ') : 'none yet'}
+                    {t('sign.signedSoFar', { emails: signed.length > 0 ? signed.join(', ') : t('sign.none') })}
                   </span>
                 )}
               </div>
@@ -187,18 +197,18 @@ const errorMessage = Astro.url.searchParams.get('error');
     </div>
 
     <form method="POST" action="/api/signature-requests" enctype="multipart/form-data" class="upload-row">
-      <input type="text" name="title" placeholder="Document title (e.g. Board Resolution — Q3)" required />
+      <input type="text" name="title" placeholder={t('sign.phTitle')} required />
       <select name="docType">
-        {DOC_TYPES.map(t => <option value={t}>{t}</option>)}
+        {DOC_TYPES.map(dt => <option value={dt.value}>{t(dt.key)}</option>)}
       </select>
       <input type="file" name="file" accept="application/pdf" required />
-      <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>Create Draft &amp; Place Fields</button>
+      <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>{t('sign.btnCreateDraft')}</button>
     </form>
   </div>
 
   <footer class="page-ftr">
     <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
-    <span>Confidential — Internal Registry Portal</span>
+    <span>{t('sign.footerConfidential')}</span>
   </footer>
 
 </div>

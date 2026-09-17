@@ -1,5 +1,9 @@
 ---
 import { stampBase64 } from '../assets/stamp';
+import { getLocale, useTranslations } from '../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -8,15 +12,15 @@ const { results: shareholders } = await db.prepare('SELECT * FROM shareholders O
 };
 
 const totalPct = shareholders.reduce((s, sh) => s + sh.percentage, 0);
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Blue Meridian Fisheries — Shareholders List</title>
+  <title>{t('print.subtitle')}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet" />
@@ -163,29 +167,29 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
 <body>
 
   <div class="toolbar">
-    <a href="/" class="btn">&larr; Back</a>
-    <button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
+    <a href="/" class="btn">&larr; {t('print.back')}</a>
+    <button class="btn btn-primary" onclick="window.print()">{t('print.printBtn')}</button>
   </div>
 
   <div class="sheet">
     <div class="hdr">
       <div class="eyebrow">Delaware Corporation · Est. 2026</div>
       <h1>Blue Meridian Fisheries Corporation</h1>
-      <div class="hdr-sub">Total Shareholders List · File No. DE 10677862</div>
+      <div class="hdr-sub">{t('print.subtitle')} · File No. DE 10677862</div>
     </div>
 
     <div class="meta-row">
-      <span>As of {today}</span>
-      <span>{shareholders.length} Record{shareholders.length === 1 ? '' : 's'}</span>
+      <span>{t('print.asOf', { date: today })}</span>
+      <span>{shareholders.length} {shareholders.length === 1 ? t('print.record') : t('print.recordPlural')}</span>
     </div>
 
     <table>
       <thead>
         <tr>
-          <th style="width:32px;">#</th>
-          <th>Entity Name</th>
-          <th>Jurisdiction</th>
-          <th class="num">Equity Held</th>
+          <th style="width:32px;">{t('print.colNum')}</th>
+          <th>{t('print.colEntity')}</th>
+          <th>{t('print.colJurisdiction')}</th>
+          <th class="num">{t('print.colEquity')}</th>
         </tr>
       </thead>
       <tbody>
@@ -202,7 +206,7 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
         <tr>
           <td></td>
           <td></td>
-          <td>Total</td>
+          <td>{t('print.total')}</td>
           <td class="num">{totalPct.toFixed(2)}%</td>
         </tr>
       </tfoot>
@@ -211,18 +215,18 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
     <div class="sign-block">
       <div class="sign">
         <div class="sign-line"></div>
-        <div class="sign-lbl">Authorized Director</div>
+        <div class="sign-lbl">{t('print.signDirector')}</div>
       </div>
       <img class="stamp" src={`data:image/png;base64,${stampBase64}`} alt="Corporate Seal" />
       <div class="sign">
         <div class="sign-line"></div>
-        <div class="sign-lbl">Date</div>
+        <div class="sign-lbl">{t('print.signDate')}</div>
       </div>
     </div>
 
     <div class="ftr">
       <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
-      <span>Confidential — Internal Registry Record</span>
+      <span>{t('print.footerConfidential')}</span>
     </div>
   </div>
 

@@ -1,6 +1,10 @@
 ---
 import TopNav from '../components/TopNav.astro';
 import { ensureCompanyDocumentsTable } from '../lib/company-documents-table';
+import { getLocale, useTranslations } from '../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -10,7 +14,7 @@ const { results: documents } = await db.prepare('SELECT * FROM company_documents
   results: Array<{ id: number; title: string; doc_type: string; file_name: string; file_size: number; uploaded_at: string }>;
 };
 
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 function formatSize(bytes: number | null | undefined): string {
   if (!bytes) return '';
@@ -20,15 +24,23 @@ function formatSize(bytes: number | null | undefined): string {
 }
 
 function formatDate(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  try { return new Date(iso).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   catch { return iso; }
 }
 
-const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreement', 'Board Resolution', 'EIN Letter', 'Stock Ledger', 'Other'];
+const DOC_TYPES = [
+  { value: 'Bylaws', key: 'doc.typeBylaws' },
+  { value: 'Certificate of Incorporation', key: 'doc.typeIncorporation' },
+  { value: 'Operating Agreement', key: 'doc.typeOperating' },
+  { value: 'Board Resolution', key: 'doc.typeBoardResolution' },
+  { value: 'EIN Letter', key: 'doc.typeEin' },
+  { value: 'Stock Ledger', key: 'doc.typeStockLedger' },
+  { value: 'Other', key: 'doc.typeOther' },
+];
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -269,7 +281,7 @@ const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreemen
     <div>
       <span class="eyebrow">Delaware Corporation · Est. 2026</span>
       <h1>Official Documents</h1>
-      <p class="hdr-sub">Corporate Records &amp; Governing Documents · File No. DE 10677862</p>
+      <p class="hdr-sub">{t('doc.subtitle')} · File No. DE 10677862</p>
     </div>
     <div class="hdr-right">
       <div class="hdr-date">{today}</div>
@@ -280,13 +292,13 @@ const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreemen
 
   <div class="card">
     <div class="card-hdr">
-      <span class="card-title">Document Library</span>
-      <span class="card-tag">{documents.length} File{documents.length === 1 ? '' : 's'}</span>
+      <span class="card-title">{t('doc.cardTitle')}</span>
+      <span class="card-tag">{documents.length} {documents.length === 1 ? t('doc.files') : t('doc.filesPlural')}</span>
     </div>
 
     <div class="docs-list">
       {documents.length === 0
-        ? <p class="docs-empty">No documents uploaded yet.</p>
+        ? <p class="docs-empty">{t('doc.empty')}</p>
         : documents.map(doc => (
             <div class="doc-item">
               <span class="doc-badge">{doc.doc_type}</span>
@@ -294,14 +306,14 @@ const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreemen
               <span class="doc-name" title={doc.file_name}>{doc.file_name}</span>
               <span class="doc-meta">{formatSize(doc.file_size)}</span>
               <span class="doc-meta">{formatDate(doc.uploaded_at)}</span>
-              <a href={`/api/company-documents/${doc.id}`} class="doc-dl">Download</a>
+              <a href={`/api/company-documents/${doc.id}`} class="doc-dl">{t('doc.download')}</a>
               <form method="POST" action={`/api/company-documents/${doc.id}`} style="display:inline">
                 <input type="hidden" name="action" value="delete" />
                 <button
                   type="submit"
                   class="doc-del"
-                  title="Delete document"
-                  onclick="return confirm('Delete this document?')"
+                  title={t('doc.delete')}
+                  onclick={`return confirm(${JSON.stringify(t('doc.confirmDelete'))})`}
                 >×</button>
               </form>
             </div>
@@ -315,18 +327,18 @@ const DOC_TYPES = ['Bylaws', 'Certificate of Incorporation', 'Operating Agreemen
       enctype="multipart/form-data"
       class="upload-row"
     >
-      <input type="text" name="title" placeholder="Document title (e.g. Amended Bylaws)" required />
+      <input type="text" name="title" placeholder={t('doc.phTitle')} required />
       <select name="docType">
-        {DOC_TYPES.map(t => <option value={t}>{t}</option>)}
+        {DOC_TYPES.map(dt => <option value={dt.value}>{t(dt.key)}</option>)}
       </select>
       <input type="file" name="file" required />
-      <button type="submit" class="btn-upload">Upload</button>
+      <button type="submit" class="btn-upload">{t('doc.btnUpload')}</button>
     </form>
   </div>
 
   <footer class="page-ftr">
     <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
-    <span>Confidential — Internal Registry Portal</span>
+    <span>{t('doc.footerConfidential')}</span>
   </footer>
 
 </div>

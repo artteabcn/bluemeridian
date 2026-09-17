@@ -2,6 +2,10 @@
 import TopNav from '../components/TopNav.astro';
 import { ensureSignatureRequestsTable } from '../lib/signature-requests-table';
 import { getAccessEmail } from '../lib/access';
+import { getLocale, useTranslations } from '../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -26,11 +30,11 @@ const myPendingRequests = pendingRequests.filter(r => {
 });
 
 const totalPct = shareholders.reduce((s, sh) => s + sh.percentage, 0);
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -295,11 +299,11 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
     <div>
       <span class="eyebrow">Delaware Corporation · Est. 2026</span>
       <h1>Blue Meridian Fisheries</h1>
-      <p class="hdr-sub">Internal Shareholder Ledger &amp; Registry Management Portal · File No. DE 10677862</p>
+      <p class="hdr-sub">{t('idx.subtitle')} · File No. DE 10677862</p>
     </div>
     <div class="hdr-right">
       <div class="hdr-date">{today}</div>
-      <div class="status-pill"><span class="dot"></span> Active Registry</div>
+      <div class="status-pill"><span class="dot"></span> {t('idx.statusActive')}</div>
     </div>
   </header>
 
@@ -311,11 +315,10 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <div>
         <div class="alert-title">
-          {myPendingRequests.length} document{myPendingRequests.length === 1 ? '' : 's'} awaiting signature
+          {t('idx.alertTitle', { n: myPendingRequests.length, s: myPendingRequests.length === 1 ? '' : 's' })}
         </div>
-        <div class="alert-body">
-          Check your email for a signing link from SignWell, or review status on <a href="/sign">Sign Documents</a>.
-        </div>
+        <div class="alert-body" set:html={t('idx.alertBody', { signLink: `<a href="/sign">${t('nav.sign')}</a>` })} />
+
         <div class="alert-list">{myPendingRequests.map(r => r.title).join(' · ')}</div>
       </div>
     </div>
@@ -325,15 +328,15 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
   <div class="stats">
     <div class="stat">
       <span class="stat-val">{shareholders.length}</span>
-      <span class="stat-lbl">Registered Entities</span>
+      <span class="stat-lbl">{t('idx.statEntities')}</span>
     </div>
     <div class="stat">
       <span class="stat-val">{totalPct.toFixed(1)}%</span>
-      <span class="stat-lbl">Equity Allocated</span>
+      <span class="stat-lbl">{t('idx.statEquity')}</span>
     </div>
     <div class="stat stat-bar">
       <div class="bar-head">
-        <span class="stat-lbl">Capital Distribution</span>
+        <span class="stat-lbl">{t('idx.statDistribution')}</span>
         <span class="stat-lbl">{totalPct.toFixed(1)} / 100%</span>
       </div>
       <div class="bar-track">
@@ -345,15 +348,15 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
   <!-- Registry card (read-only) -->
   <div class="card">
     <div class="card-hdr">
-      <span class="card-title">Shareholder Registry</span>
-      <span class="card-tag">Incorporators &amp; Equity Holders</span>
+      <span class="card-title">{t('idx.cardTitle')}</span>
+      <span class="card-tag">{t('idx.cardTag')}</span>
     </div>
 
     <div class="t-head">
-      <div>Entity Name</div>
-      <div>Jurisdiction</div>
-      <div>Equity</div>
-      <div>Actions</div>
+      <div>{t('idx.colEntity')}</div>
+      <div>{t('idx.colJurisdiction')}</div>
+      <div>{t('idx.colEquity')}</div>
+      <div>{t('idx.colActions')}</div>
     </div>
 
     {shareholders.map((sh) => (
@@ -362,7 +365,7 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
         <div class="sh-jurisdiction">{sh.jurisdiction}</div>
         <div class="sh-pct">{sh.percentage.toFixed(2)}%</div>
         <div>
-          <a href={`/api/certificate/${sh.id}`} target="_blank" class="btn btn-cert">Certificate</a>
+          <a href={`/api/certificate/${sh.id}`} target="_blank" class="btn btn-cert">{t('idx.btnCertificate')}</a>
         </div>
       </div>
     ))}
@@ -371,7 +374,7 @@ const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '
   <!-- Page footer -->
   <footer class="page-ftr">
     <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
-    <span>Confidential — Internal Registry Portal</span>
+    <span>{t('idx.footerConfidential')}</span>
   </footer>
 
 </div>

@@ -1,5 +1,8 @@
 ---
-import TopNav from '../../../components/TopNav.astro';
+import { getLocale, useTranslations } from '../../../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 const { id } = Astro.params;
@@ -14,11 +17,11 @@ const redirectUrl = new URL(`/api/signature-requests/${req.id}/mark-sent`, Astro
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Place Signature Fields</title>
+  <title>{t('edit.title')}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet" />
@@ -51,25 +54,23 @@ const redirectUrl = new URL(`/api/signature-requests/${req.id}/mark-sent`, Astro
 <div class="wrap">
   <header class="hdr">
     <div>
-      <h1>Place Signature Fields</h1>
+      <h1>{t('edit.title')}</h1>
       <p class="hdr-sub">{req.title}</p>
     </div>
-    <a href="/sign" class="back-link">&larr; Back to Sign Documents (draft stays saved)</a>
+    <a href="/sign" class="back-link">&larr; {t('edit.back')}</a>
   </header>
 
   <div class="hint">
-    Drag a <b>signature field</b> onto each shareholder's spot on the actual document below, on whichever page
-    makes sense — then click <b>Send</b> inside the editor. If you close this without sending, the draft stays
-    on the Sign Documents list; you can delete it and start over if the editor link has expired.
+    {t('edit.hint')}
   </div>
 
   <div class="editor-wrap">
-    <div id="signwell-editor"><p class="loading">Loading editor…</p></div>
+    <div id="signwell-editor"><p class="loading">{t('edit.loading')}</p></div>
   </div>
 </div>
 
 <script src="https://static.signwell.com/assets/embedded.js"></script>
-<script define:vars={{ embedUrl: req.embedded_edit_url, redirectUrl }}>
+<script define:vars={{ embedUrl: req.embedded_edit_url, redirectUrl, errorMsg: t('edit.error') }}>
   try {
     const embed = new SignWellEmbed({
       url: embedUrl,
@@ -78,15 +79,16 @@ const redirectUrl = new URL(`/api/signature-requests/${req.id}/mark-sent`, Astro
       events: {
         error: (e) => {
           document.getElementById('signwell-editor').innerHTML =
-            '<p class="error-msg">Could not load the SignWell editor (the link may have expired). Go back and delete this draft, then start again.</p>';
+            '<p class="error-msg"></p>';
+          document.querySelector('#signwell-editor .error-msg').textContent = errorMsg;
           console.error('SignWell embed error', e);
         },
       },
     });
     embed.open();
   } catch (e) {
-    document.getElementById('signwell-editor').innerHTML =
-      '<p class="error-msg">Could not start the SignWell editor.</p>';
+    document.getElementById('signwell-editor').innerHTML = '<p class="error-msg"></p>';
+    document.querySelector('#signwell-editor .error-msg').textContent = errorMsg;
     console.error(e);
   }
 </script>

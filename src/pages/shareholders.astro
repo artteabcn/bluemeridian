@@ -2,6 +2,10 @@
 import TopNav from '../components/TopNav.astro';
 import { ensureDocumentsTable } from '../lib/documents-table';
 import { ensureShareholderEmailColumn } from '../lib/shareholders-table';
+import { getLocale, useTranslations } from '../i18n/utils';
+
+const locale = getLocale(Astro);
+const t = useTranslations(locale);
 
 const db = Astro.locals.runtime.env.DB;
 const r2 = (Astro.locals.runtime.env as any).FILES;
@@ -19,12 +23,12 @@ if (Astro.request.method === 'POST') {
       await db.prepare('INSERT INTO shareholders (name, jurisdiction, percentage, email) VALUES (?,?,?,?)')
         .bind(String(fd.get('name')), String(fd.get('jurisdiction')), parseFloat(String(fd.get('percentage'))), String(fd.get('email') || '') || null)
         .run();
-      message = 'Shareholder added to the registry.';
+      message = t('sh.toastAdded');
     } else if (action === 'update') {
       await db.prepare('UPDATE shareholders SET name=?, jurisdiction=?, percentage=?, email=? WHERE id=?')
         .bind(String(fd.get('name')), String(fd.get('jurisdiction')), parseFloat(String(fd.get('percentage'))), String(fd.get('email') || '') || null, Number(fd.get('id')))
         .run();
-      message = 'Registry entry updated.';
+      message = t('sh.toastUpdated');
     } else if (action === 'delete') {
       const id = Number(fd.get('id'));
       if (r2) {
@@ -35,7 +39,7 @@ if (Astro.request.method === 'POST') {
         } catch { /* documents table may not exist yet */ }
       }
       await db.prepare('DELETE FROM shareholders WHERE id=?').bind(id).run();
-      message = 'Shareholder removed from the registry.';
+      message = t('sh.toastRemoved');
     }
   } catch (e: any) {
     message = 'Error: ' + e.message;
@@ -52,7 +56,7 @@ const { results: allDocuments } = await db.prepare('SELECT * FROM documents ORDE
   results: Array<{ id: number; shareholder_id: number; file_name: string; doc_type: string; file_size: number; uploaded_at: string }>;
 };
 
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 function formatSize(bytes: number | null | undefined): string {
   if (!bytes) return '';
@@ -62,13 +66,13 @@ function formatSize(bytes: number | null | undefined): string {
 }
 
 function formatDate(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  try { return new Date(iso).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   catch { return iso; }
 }
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -192,7 +196,7 @@ function formatDate(iso: string): string {
     <div>
       <span class="eyebrow">Delaware Corporation · Est. 2026</span>
       <h1>Shareholders</h1>
-      <p class="hdr-sub">Manage Registry Entries, Contact Emails &amp; Identity Documents · File No. DE 10677862</p>
+      <p class="hdr-sub">{t('sh.subtitle')} · File No. DE 10677862</p>
     </div>
     <div class="hdr-right">
       <div class="hdr-date">{today}</div>
@@ -205,16 +209,16 @@ function formatDate(iso: string): string {
 
   <div class="card">
     <div class="card-hdr">
-      <span class="card-title">Shareholder Registry</span>
-      <span class="card-tag">Incorporators &amp; Equity Holders</span>
+      <span class="card-title">{t('sh.cardTitle')}</span>
+      <span class="card-tag">{t('sh.cardTag')}</span>
     </div>
 
     <div class="t-head">
-      <div>Entity Name</div>
-      <div>Jurisdiction</div>
-      <div>Email</div>
-      <div>Equity</div>
-      <div>Actions</div>
+      <div>{t('sh.colEntity')}</div>
+      <div>{t('sh.colJurisdiction')}</div>
+      <div>{t('sh.colEmail')}</div>
+      <div>{t('sh.colEquity')}</div>
+      <div>{t('sh.colActions')}</div>
     </div>
 
     {shareholders.map((sh) => {
@@ -224,29 +228,29 @@ function formatDate(iso: string): string {
           <form method="POST" class="sh-row">
             <input type="hidden" name="id" value={sh.id} />
             <div>
-              <input type="text" name="name" value={sh.name} placeholder="Entity name" required />
+              <input type="text" name="name" value={sh.name} placeholder={t('sh.phName')} required />
             </div>
             <div>
-              <input type="text" name="jurisdiction" value={sh.jurisdiction} placeholder="Jurisdiction" required />
+              <input type="text" name="jurisdiction" value={sh.jurisdiction} placeholder={t('sh.phJurisdiction')} required />
             </div>
             <div>
-              <input type="email" name="email" value={sh.email ?? ''} placeholder="name@company.com" />
+              <input type="email" name="email" value={sh.email ?? ''} placeholder={t('sh.phEmail')} />
             </div>
             <div class="pct-wrap">
               <input type="number" step="0.01" min="0" max="100" name="percentage" value={sh.percentage} required />
               <span class="pct-sym">%</span>
             </div>
             <div class="cell-act">
-              <button type="submit" name="action" value="update" class="btn btn-save">Save</button>
+              <button type="submit" name="action" value="update" class="btn btn-save">{t('sh.btnSave')}</button>
               <button
                 type="submit"
                 name="action"
                 value="delete"
                 class="btn btn-remove"
-                onclick="return confirm('Permanently remove this shareholder and all their documents from the registry?')"
-              >Remove</button>
+                onclick={`return confirm(${JSON.stringify(t('sh.confirmRemove'))})`}
+              >{t('sh.btnRemove')}</button>
               <button type="button" class="btn btn-docs" id={`toggle-${sh.id}`} onclick={`toggleDocs(${sh.id})`}>
-                Docs {shDocs.length > 0 ? `(${shDocs.length})` : ''}
+                {t('sh.btnDocs')} {shDocs.length > 0 ? `(${shDocs.length})` : ''}
               </button>
             </div>
           </form>
@@ -254,31 +258,31 @@ function formatDate(iso: string): string {
           <div class="docs-panel" id={`docs-${sh.id}`}>
             <div class="docs-list">
               {shDocs.length === 0
-                ? <p class="docs-empty">No documents uploaded yet.</p>
+                ? <p class="docs-empty">{t('sh.docsEmpty')}</p>
                 : shDocs.map(doc => (
                     <div class="doc-item">
                       <span class="doc-badge">{doc.doc_type}</span>
                       <span class="doc-name" title={doc.file_name}>{doc.file_name}</span>
                       <span class="doc-meta">{formatSize(doc.file_size)}</span>
                       <span class="doc-meta">{formatDate(doc.uploaded_at)}</span>
-                      <a href={`/api/documents/${sh.id}/${doc.id}`} class="doc-dl">Download</a>
+                      <a href={`/api/documents/${sh.id}/${doc.id}`} class="doc-dl">{t('sh.docDownload')}</a>
                       <form method="POST" action={`/api/documents/${sh.id}/${doc.id}`} style="display:inline">
                         <input type="hidden" name="action" value="delete" />
-                        <button type="submit" class="doc-del" title="Delete document" onclick="return confirm('Delete this document?')">×</button>
+                        <button type="submit" class="doc-del" title={t('sh.docDelete')} onclick={`return confirm(${JSON.stringify(t('sh.confirmDocDelete'))})`}>×</button>
                       </form>
                     </div>
                   ))
               }
             </div>
             <form method="POST" action={`/api/documents/${sh.id}`} enctype="multipart/form-data" class="upload-row">
-              <span class="upload-lbl">Upload</span>
+              <span class="upload-lbl">{t('sh.uploadLabel')}</span>
               <input type="file" name="file" required />
               <select name="docType">
-                <option value="Passport">Passport</option>
-                <option value="Certificate">Certificate</option>
-                <option value="Other">Other</option>
+                <option value="Passport">{t('sh.docTypePassport')}</option>
+                <option value="Certificate">{t('sh.docTypeCertificate')}</option>
+                <option value="Other">{t('sh.docTypeOther')}</option>
               </select>
-              <button type="submit" class="btn-upload">Upload</button>
+              <button type="submit" class="btn-upload">{t('sh.btnUpload')}</button>
             </form>
           </div>
         </div>
@@ -288,21 +292,21 @@ function formatDate(iso: string): string {
     <div class="add-block" id="add-block">
       <form method="POST" class="sh-row">
         <div>
-          <input type="text" name="name" placeholder="Entity name" required />
+          <input type="text" name="name" placeholder={t('sh.phName')} required />
         </div>
         <div>
-          <input type="text" name="jurisdiction" placeholder="Jurisdiction" required />
+          <input type="text" name="jurisdiction" placeholder={t('sh.phJurisdiction')} required />
         </div>
         <div>
-          <input type="email" name="email" placeholder="name@company.com" />
+          <input type="email" name="email" placeholder={t('sh.phEmail')} />
         </div>
         <div class="pct-wrap">
           <input type="number" step="0.01" min="0" max="100" name="percentage" placeholder="0.00" required />
           <span class="pct-sym">%</span>
         </div>
         <div class="cell-act">
-          <button type="submit" name="action" value="add" class="btn btn-save">Add</button>
-          <button type="button" class="btn btn-remove" onclick="closeAdd()">Cancel</button>
+          <button type="submit" name="action" value="add" class="btn btn-save">{t('sh.btnAdd')}</button>
+          <button type="button" class="btn btn-remove" onclick="closeAdd()">{t('sh.btnCancel')}</button>
         </div>
       </form>
     </div>
@@ -313,13 +317,13 @@ function formatDate(iso: string): string {
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
       </svg>
-      Add Shareholder
+      {t('sh.btnAddShareholder')}
     </button>
   </div>
 
   <footer class="page-ftr">
     <span>Blue Meridian Fisheries Corporation · Delaware · DE 10677862</span>
-    <span>Confidential — Internal Registry Portal</span>
+    <span>{t('sh.footerConfidential')}</span>
   </footer>
 
 </div>
