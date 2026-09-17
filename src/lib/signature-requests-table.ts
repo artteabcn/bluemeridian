@@ -6,7 +6,7 @@ export async function ensureSignatureRequestsTable(db: any): Promise<void> {
       doc_type TEXT NOT NULL DEFAULT 'Other',
       file_name TEXT NOT NULL,
       r2_key TEXT NOT NULL,
-      opensign_document_id TEXT,
+      esign_document_id TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       signer_emails TEXT NOT NULL DEFAULT '[]',
       final_r2_key TEXT,
@@ -14,4 +14,10 @@ export async function ensureSignatureRequestsTable(db: any): Promise<void> {
       completed_at TEXT
     )
   `).run();
+
+  const { results } = await db.prepare('PRAGMA table_info(signature_requests)').all();
+  const hasColumn = (results as Array<{ name: string }>).some(col => col.name === 'esign_document_id');
+  if (!hasColumn) {
+    await db.prepare('ALTER TABLE signature_requests ADD COLUMN esign_document_id TEXT').run();
+  }
 }

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { ensureSignatureRequestsTable } from '../../../lib/signature-requests-table';
-import { createSignatureRequest } from '../../../lib/opensign';
+import { createSignatureRequest } from '../../../lib/signwell';
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const db = locals.runtime.env.DB;
@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   });
 
   await db.prepare(
-    'INSERT INTO signature_requests (title, doc_type, file_name, r2_key, opensign_document_id) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO signature_requests (title, doc_type, file_name, r2_key, esign_document_id) VALUES (?, ?, ?, ?, ?)'
   ).bind(title, docType, file.name, r2Key, documentId).run();
 
   return redirect('/sign', 303);
