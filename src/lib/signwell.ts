@@ -28,18 +28,22 @@ function headers(env: any): Record<string, string> {
 
 export async function createSignatureRequest(
   env: any,
-  opts: { title: string; fileBytes: ArrayBuffer; fileName: string; signers: Signer[] }
+  opts: { title: string; fileBytes: ArrayBuffer; fileName: string; signers: Signer[]; signaturePage: number }
 ): Promise<CreateSignatureRequestResult> {
   const base64 = arrayBufferToBase64(opts.fileBytes);
   const recipients = opts.signers.map((s, i) => ({ id: String(i + 1), name: s.name, email: s.email }));
 
-  // One signature field per signer, stacked on page 1. Reposition once you
-  // see how it lands on your actual documents.
+  // SignWell field coordinates are pixels from the page's TOP-LEFT corner
+  // (not points from the bottom, and not a percentage). This lays one
+  // signature field per signer in a row near the bottom of the chosen page,
+  // spaced out horizontally so they don't overlap. `y` assumes a roughly
+  // US-Letter/A4 portrait page — nudge it if your documents render taller
+  // or shorter than that.
   const fields = [
     recipients.map((r, i) => ({
-      x: 40,
-      y: 680 - i * 40,
-      page: 1,
+      x: 50 + i * 220,
+      y: 700,
+      page: opts.signaturePage,
       recipient_id: r.id,
       type: 'signature',
       required: true,
@@ -109,6 +113,18 @@ export async function downloadCompletedPdf(env: any, documentId: string): Promis
   }
 
   return res.arrayBuffer();
+}
+
+export async function deleteDocument(env: any, documentId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/documents/${documentId}`, {
+    method: 'DELETE',
+    headers: headers(env),
+  });
+
+  // 404 just means it's already gone on SignWell's side — fine to proceed.
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`SignWell delete document failed: ${res.status} ${await res.text()}`);
+  }
 }
 
 function arrayBufferToBase64(buf: ArrayBuffer): string {

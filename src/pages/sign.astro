@@ -29,6 +29,7 @@ function formatDate(iso: string | null): string {
 }
 
 const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreement', 'Stock Transfer', 'Other'];
+const errorMessage = Astro.url.searchParams.get('error');
 ---
 
 <!DOCTYPE html>
@@ -91,6 +92,14 @@ const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreemen
     .signers-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; font-size: 12.5px; color: var(--muted); }
     .signers-box b { color: var(--text); }
 
+    .toast { border-radius: 8px; padding: 11px 16px; font-size: 13px; margin-bottom: 24px; background: rgba(248,107,107,.08); border: 1px solid rgba(248,107,107,.22); color: var(--red); }
+
+    .btn-delete { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+    .btn-delete:hover { background: rgba(248,107,107,.1); color: var(--red); border-color: rgba(248,107,107,.28); }
+
+    .page-input { width: 56px; background: rgba(6,13,20,.7); border: 1px solid rgba(201,169,110,.14); border-radius: 7px; padding: 8px 6px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--text); outline: none; text-align: center; }
+    .page-lbl { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
     .page-ftr { padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
 
     @media (max-width: 768px) {
@@ -116,6 +125,8 @@ const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreemen
   </header>
 
   <TopNav active="/sign" />
+
+  {errorMessage && <div class="toast">{errorMessage}</div>}
 
   <div class="signers-box">
     Signing happens on <b>SignWell</b> — each shareholder with an email on file receives a signing link by email
@@ -152,6 +163,14 @@ const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreemen
                     <button type="submit" class="btn btn-check">Check Status</button>
                   </form>
                 )}
+                <form
+                  method="POST"
+                  action={`/api/signature-requests/${r.id}/delete`}
+                  style="display:inline"
+                  onsubmit="return confirm('Delete this signature request? This cancels it on SignWell too and cannot be undone.')"
+                >
+                  <button type="submit" class="btn btn-delete">Delete</button>
+                </form>
                 {r.status !== 'completed' && (
                   <span class="signers-note">
                     Signed so far: {signed.length > 0 ? signed.join(', ') : 'none yet'}
@@ -169,8 +188,15 @@ const DOC_TYPES = ['Board Resolution', 'Bylaws Amendment', 'Shareholder Agreemen
         {DOC_TYPES.map(t => <option value={t}>{t}</option>)}
       </select>
       <input type="file" name="file" accept="application/pdf" required />
+      <span class="page-lbl">Signature page</span>
+      <input type="number" name="signaturePage" class="page-input" value="1" min="1" required />
       <button type="submit" class="btn-upload" disabled={shareholders.length === 0}>Send for Signature</button>
     </form>
+    <p style="padding:0 24px 16px;font-size:11px;color:var(--muted);">
+      Signature fields land near the bottom of the page number you pick above, side by side for each shareholder.
+      If they land somewhere odd, it's usually because the PDF's page size differs from standard Letter/A4 — try a
+      different page number or let us know and we'll adjust the placement.
+    </p>
   </div>
 
   <footer class="page-ftr">

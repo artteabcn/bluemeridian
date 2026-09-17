@@ -44,7 +44,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const req = results[0] as SignatureRequestRow | undefined;
 
   if (req) {
-    await processSignatureRequest(db, r2, env, req);
+    try {
+      await processSignatureRequest(db, r2, env, req);
+    } catch (e: any) {
+      // Return 500 so SignWell retries the delivery instead of silently
+      // dropping this event.
+      console.error('signwell-webhook processing failed', e);
+      return new Response('Processing failed', { status: 500 });
+    }
   }
 
   return new Response('OK', { status: 200 });

@@ -10,7 +10,11 @@ export const POST: APIRoute = async ({ params, locals, redirect }) => {
   const req = results[0] as SignatureRequestRow | undefined;
   if (!req) return new Response('Signature request not found', { status: 404 });
 
-  await processSignatureRequest(db, r2, locals.runtime.env, req);
+  try {
+    await processSignatureRequest(db, r2, locals.runtime.env, req);
+  } catch (e: any) {
+    return redirect('/sign?error=' + encodeURIComponent('Check status failed: ' + e.message), 303);
+  }
 
   return redirect('/sign', 303);
 };
